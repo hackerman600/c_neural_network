@@ -220,15 +220,44 @@ double* soft_max(double *pred, int cols){
 
     return soft_out;
         
-} 
+};
 
 
-double* sparse_cat_loss_vector(double **soft_y_pred, double *y, int rows){
+double* onehot_encode(double **soft_y_pred, double *y, int rows, int cols){
+    double *onehot_out = malloc(sizeof(double)*rows);
+
+    for (int x = 0; x < rows; x++){
+        if (soft_y_pred[x][0] > soft_y_pred[x][1]){
+            onehot_out[x] = 0;
+        }
+
+        else if (soft_y_pred[x][1] > soft_y_pred[x][0]){
+            onehot_out[x] = 1;
+        }
+
+        else { 
+            onehot_out[x] = 1;
+        }
+    }
+
+    return onehot_out;
+}
+
+
+double* sparse_cat_loss_vector(double **soft_y_pred, double *y, int rows, int cols){
     double *sparse_cat_crossent = malloc(sizeof(double)*rows); 
     double total_cost = 0.0;
+    double *y_pred_onehot = onehot_encode(soft_y_pred, y, rows, cols);
+    int tally = 0.0;
+    double rw = (double)rows;
     for (int r = 0; r < rows; r++){
         int id = (int)y[r];
         double cost = -log(soft_y_pred[r][id]);
+
+        if (y_pred_onehot[r] == y[r]){
+            tally += 1.0;
+        }
+
         if (cost < 0){
             cost *= -1;
         } if (isinf(cost)){
@@ -239,7 +268,8 @@ double* sparse_cat_loss_vector(double **soft_y_pred, double *y, int rows){
         total_cost += cost;
         printf("cost: %f,%s",cost,"\n");
     }
-    printf("total loss is: %f", total_cost/rows);
+    printf("\ntotal loss is: %f", total_cost/rows);
+    printf("\ntotal accuracy is: %f", tally/rw*100.0);
 
     return sparse_cat_crossent;
 }
@@ -380,8 +410,9 @@ int main(){
     }
 
     //CALCULATE THE COST
-    double* cost = sparse_cat_loss_vector(a_outs[sizeof(a_outs)/sizeof(a_outs[0])-1], y_data, 100);
-         
+    double* cost = sparse_cat_loss_vector(a_outs[sizeof(a_outs)/sizeof(a_outs[0])-1], y_data, 100,2);
+
+
     //TRAIN THE NEURAL NETWORK.
     //double ***gradients = calculate_gradients(weights, bias, a_outs, z_outs, model_structure, weight_dimension);
 
